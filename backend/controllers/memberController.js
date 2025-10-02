@@ -1,5 +1,7 @@
 const { pool } = require('../config/database');
 const XLSX = require('xlsx');
+const { processImage } = require('../middleware/upload');
+const path = require('path');
 
 // Get all members (admin only)
 const getAllMembers = async (req, res) => {
@@ -109,6 +111,22 @@ const createMember = async (req, res) => {
       other_info
     } = req.body;
 
+    // Handle image upload if present
+    let profileImagePath = null;
+    if (req.file) {
+      try {
+        const timestamp = Date.now();
+        const filename = `member_${timestamp}_${Math.random().toString(36).substring(7)}.jpg`;
+        profileImagePath = await processImage(req.file.buffer, filename);
+      } catch (imageError) {
+        console.error('Error processing image:', imageError);
+        return res.status(400).json({
+          success: false,
+          message: 'Failed to process uploaded image'
+        });
+      }
+    }
+
     // Validate required fields
     if (!name) {
       return res.status(400).json({
@@ -154,7 +172,8 @@ const createMember = async (req, res) => {
       home_town_address: home_town_address || null,
       qualification: qualification || null,
       specialization: specialization || null,
-      other_info: other_info || null
+      other_info: other_info || null,
+      profile_image: profileImagePath || null
     };
 
     const [result] = await pool.execute(`
@@ -162,14 +181,14 @@ const createMember = async (req, res) => {
         user_id, family_share, name, address, email, mobile_no, 
         service_address, current_city, current_state, current_address, 
         age, swa_gotra, mame_gotra, home_town_address, qualification, 
-        specialization, other_info
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        specialization, other_info, profile_image
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       cleanData.user_id, cleanData.family_share, cleanData.name, cleanData.address, 
       cleanData.email, cleanData.mobile_no, cleanData.service_address, cleanData.current_city, 
       cleanData.current_state, cleanData.current_address, cleanData.age, cleanData.swa_gotra, 
       cleanData.mame_gotra, cleanData.home_town_address, cleanData.qualification,
-      cleanData.specialization, cleanData.other_info
+      cleanData.specialization, cleanData.other_info, cleanData.profile_image
     ]);
 
     // Get the created member

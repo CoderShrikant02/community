@@ -9,7 +9,9 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useAuth } from '@/context/AuthContext';
@@ -18,6 +20,7 @@ import { apiService } from '@/services/api';
 export default function FormScreen() {
   const { token } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   
   // Member form state
   const [memberForm, setMemberForm] = useState({
@@ -44,6 +47,78 @@ export default function FormScreen() {
       ...prev,
       [field]: value
     }));
+  };
+
+  const pickImage = async () => {
+    try {
+      // Request permission to access media library
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (permissionResult.granted === false) {
+        Alert.alert('Permission Required', 'Permission to access camera roll is required!');
+        return;
+      }
+
+      // Show action sheet for image source selection
+      Alert.alert(
+        'Select Image',
+        'Choose how you want to add your photo',
+        [
+          { text: 'Camera', onPress: openCamera },
+          { text: 'Gallery', onPress: openGallery },
+          { text: 'Cancel', style: 'cancel' },
+        ]
+      );
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to open image picker');
+    }
+  };
+
+  const openCamera = async () => {
+    try {
+      const cameraPermission = await ImagePicker.requestCameraPermissionsAsync();
+      if (cameraPermission.granted === false) {
+        Alert.alert('Permission Required', 'Permission to access camera is required!');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled) {
+        setSelectedImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error opening camera:', error);
+      Alert.alert('Error', 'Failed to open camera');
+    }
+  };
+
+  const openGallery = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled) {
+        setSelectedImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error opening gallery:', error);
+      Alert.alert('Error', 'Failed to open gallery');
+    }
+  };
+
+  const removeImage = () => {
+    setSelectedImage(null);
   };
 
   const validateForm = () => {
@@ -90,7 +165,10 @@ export default function FormScreen() {
         }
       });
 
-      const response = await apiService.members.create(memberData, token || undefined);
+      // Use createWithImage if image is selected, otherwise use regular create
+      const response = selectedImage 
+        ? await apiService.members.createWithImage(memberData, selectedImage, token || undefined)
+        : await apiService.members.create(memberData, token || undefined);
       
       if (response.success) {
         Alert.alert(
@@ -119,6 +197,7 @@ export default function FormScreen() {
                   specialization: '',
                   other_info: '',
                 });
+                setSelectedImage(null);
               }
             }
           ]
@@ -147,6 +226,30 @@ export default function FormScreen() {
             {/* Basic Information */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Basic Information</Text>
+              
+              {/* Profile Image Section */}
+              <Text style={styles.label}>Profile Image</Text>
+              <View style={styles.imageContainer}>
+                {selectedImage ? (
+                  <View style={styles.selectedImageContainer}>
+                    <Image source={{ uri: selectedImage }} style={styles.profileImage} />
+                    <View style={styles.imageButtons}>
+                      <TouchableOpacity style={styles.changeImageButton} onPress={pickImage}>
+                        <Text style={styles.changeImageText}>Change Photo</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.removeImageButton} onPress={removeImage}>
+                        <Text style={styles.removeImageText}>Remove</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ) : (
+                  <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
+                    <Text style={styles.imagePickerText}>📷</Text>
+                    <Text style={styles.imagePickerLabel}>Add Profile Photo</Text>
+                    <Text style={styles.imagePickerSubtext}>Tap to select from camera or gallery</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
               
               <Text style={styles.label}>Full Name *</Text>
               <TextInput
@@ -386,5 +489,77 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  imageContainer: {
+    marginBottom: 15,
+  },
+  imagePicker: {
+    borderWidth: 2,
+    borderColor: '#ddd',
+    borderStyle: 'dashed',
+    borderRadius: 12,
+    padding: 30,
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+  },
+  imagePickerText: {
+    fontSize: 40,
+    marginBottom: 10,
+  },
+  imagePickerLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 5,
+  },
+  imagePickerSubtext: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+  },
+  selectedImageContainer: {
+    alignItems: 'center',
+  },
+  profileImage: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    marginBottom: 15,
+    borderWidth: 3,
+    borderColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  imageButtons: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  changeImageButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  changeImageText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  removeImageButton: {
+    backgroundColor: '#FF3B30',
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  removeImageText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

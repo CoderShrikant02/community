@@ -1,6 +1,7 @@
 // server.js
 const express = require("express");
 const cors = require("cors");
+const path = require("path");
 require('dotenv').config();
 const { testConnection } = require('./config/database');
 const authRoutes = require('./routes/auth');
@@ -8,21 +9,33 @@ const memberRoutes = require('./routes/members');
 
 const app = express();
 
-// Middleware
+// Middleware - Mobile app friendly CORS
 app.use(cors({
-  origin: [
-    process.env.FRONTEND_URL || 'http://localhost:8081',
-    'http://localhost:8081',
-    'http://localhost:19006', // Expo web
-    'http://10.19.188.135:8081',
-    'exp://10.19.188.135:8081',
-    // Allow any localhost origin for development
-    /^http:\/\/localhost:\d+$/,
-    /^http:\/\/127\.0\.0\.1:\d+$/
-  ],
+  origin: process.env.NODE_ENV === 'production' 
+    ? [
+        // Mobile app origins (APK)
+        /^https?:\/\/.*$/,  // Allow all HTTP/HTTPS for mobile
+        /^exp:\/\/.*$/,     // Expo development
+        /^exps:\/\/.*$/,    // Expo secure
+        'null'              // Mobile app requests
+      ]
+    : [
+        process.env.FRONTEND_URL || 'http://localhost:8081',
+        'http://localhost:8081',
+        'http://localhost:19006', // Expo web
+        'http://10.19.188.135:8081',
+        'exp://10.19.188.135:8081',
+        // Allow any localhost origin for development
+        /^http:\/\/localhost:\d+$/,
+        /^http:\/\/127\.0\.0\.1:\d+$/,
+        'null' // For mobile apps
+      ],
   credentials: true
 }));
 app.use(express.json());
+
+// Serve static files for uploaded images
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Test database connection
 testConnection();
@@ -68,8 +81,17 @@ app.use((req, res) => {
 });
 
 const PORT = process.env.PORT || 5000;
+
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running at http://0.0.0.0:${PORT}`);
-  console.log(`Also accessible at http://localhost:${PORT}`);
-  console.log(`And at http://10.19.188.135:${PORT} for mobile devices`);
+  console.log(`🚀 MAVS Backend Server running on port ${PORT}`);
+  console.log(`📱 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🗄️  Database: ${process.env.DB_HOST || 'localhost'}`);
+  
+  if (process.env.NODE_ENV === 'production') {
+    console.log(`🌐 Production server accessible at the deployed URL`);
+  } else {
+    console.log(`🔧 Development server accessible at:`);
+    console.log(`   - http://localhost:${PORT}`);
+    console.log(`   - http://10.19.188.135:${PORT} (for mobile)`);
+  }
 });

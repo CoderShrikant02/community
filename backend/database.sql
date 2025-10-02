@@ -1,9 +1,7 @@
 -- Create database
 CREATE DATABASE mavs;
-
 -- Use database
 USE mavs;
-
 -- Users table
 CREATE TABLE users (
     user_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -20,7 +18,6 @@ CREATE TABLE admins (
     password VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
 CREATE TABLE members (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT,
@@ -40,6 +37,6 @@ CREATE TABLE members (
     qualification VARCHAR(100),
     specialization VARCHAR(150),
     other_info TEXT,
+    profile_image VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-

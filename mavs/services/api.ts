@@ -63,6 +63,7 @@ export interface Member {
   qualification?: string;
   specialization?: string;
   other_info?: string;
+  profile_image?: string;
   created_at: string;
   user_full_name?: string;
   user_email?: string;
@@ -300,6 +301,49 @@ class ApiService {
         return response;
       } catch (error: any) {
         const message = error.response?.data?.message || 'Failed to create member';
+        throw new Error(message);
+      }
+    },
+
+    /**
+     * Create a new member with image upload
+     */
+    createWithImage: async (memberData: Omit<Member, 'id' | 'created_at' | 'user_full_name' | 'user_email'>, imageUri?: string, token?: string): Promise<ApiResponse<Member>> => {
+      try {
+        const formData = new FormData();
+        
+        // Add all member data to FormData
+        Object.keys(memberData).forEach(key => {
+          const value = (memberData as any)[key];
+          if (value !== undefined && value !== null) {
+            formData.append(key, value.toString());
+          }
+        });
+
+        // Add image if provided
+        if (imageUri) {
+          const filename = imageUri.split('/').pop() || 'image.jpg';
+          const match = /\.(\w+)$/.exec(filename);
+          const type = match ? `image/${match[1]}` : 'image/jpeg';
+          
+          formData.append('profile_image', {
+            uri: imageUri,
+            name: filename,
+            type: type,
+          } as any);
+        }
+
+        const config = {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        };
+
+        const response = await this.api.post('/members', formData, config);
+        return response.data;
+      } catch (error: any) {
+        const message = error.response?.data?.message || 'Failed to create member with image';
         throw new Error(message);
       }
     },
