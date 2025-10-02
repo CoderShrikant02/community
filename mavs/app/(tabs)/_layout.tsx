@@ -11,7 +11,12 @@ import { useAuth } from '@/context/AuthContext';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
-  const { isAdmin } = useAuth();
+  const { user, isAdmin } = useAuth();
+
+  // Only show tabs if user is authenticated
+  if (!user) {
+    return null; // This will prevent the tab layout from rendering
+  }
 
   return (
     <Tabs
@@ -36,29 +41,40 @@ export default function TabLayout() {
         }}
       />
       
-      {isAdmin() ? (
-        <Tabs.Screen
-          name="admin"
-          options={{
-            title: 'Admin',
-            tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.badge.key.fill" color={color} />,
-          }}
-        />
-      ) : (
-        <Tabs.Screen
-          name="donation"
-          options={{
-            title: 'Donate',
-            tabBarIcon: ({ color }) => <IconSymbol size={28} name="heart.fill" color={color} />,
-          }}
-        />
-      )}
+      {/* Donation tab - visible to all authenticated users */}
+      <Tabs.Screen
+        name="donation"
+        options={{
+          title: 'Donate',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="heart.fill" color={color} />,
+        }}
+      />
       
+      {/* Form tab - only visible to authenticated users */}
       <Tabs.Screen
         name="form"
         options={{
           title: 'Form',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+        }}
+      />
+      
+      {/* Submissions tab - visible to all authenticated users */}
+      <Tabs.Screen
+        name="submissions"
+        options={{
+          title: 'Submissions',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="doc.text.fill" color={color} />,
+        }}
+      />
+      
+      {/* Admin tab - only visible to admin users */}
+      <Tabs.Screen
+        name="admin"
+        options={{
+          title: 'Admin',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.badge.key.fill" color={color} />,
+          href: isAdmin() ? undefined : null, // Hide tab by setting href to null
         }}
       />
       

@@ -54,7 +54,7 @@ export default function RegisterScreen() {
         role,
       });
       Alert.alert('Success', 'Registration successful!');
-      router.replace('/(tabs)');
+      // Navigation will be handled automatically by AuthWrapper in root layout
     } catch (error: any) {
       Alert.alert('Error', error.response?.data?.error || 'Registration failed');
     } finally {

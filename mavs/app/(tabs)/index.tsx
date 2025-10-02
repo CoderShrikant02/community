@@ -1,28 +1,15 @@
 import { StyleSheet, TouchableOpacity } from 'react-native';
-import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 
 import { HelloWave } from '@/components/HelloWave';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { apiService } from '@/services/api';
 import { useAuth } from '@/context/AuthContext';
 
 export default function HomeScreen() {
-  const [backendStatus, setBackendStatus] = useState<string>('Testing...');
-  const { user, isAdmin } = useAuth();
+  const { user } = useAuth();
   const router = useRouter();
-
-  const testConnection = async () => {
-    try {
-      await apiService.testConnection();
-      setBackendStatus('✅ Connected');
-    } catch (err) {
-      console.error('Connection failed:', err);
-      setBackendStatus('❌ Failed');
-    }
-  };
 
   const navigateToDonation = () => {
     router.push('/donation' as any);
@@ -32,9 +19,14 @@ export default function HomeScreen() {
     router.push('/form' as any);
   };
 
-  useEffect(() => {
-    testConnection();
-  }, []);
+  const handleEventsPress = () => {
+    // For now, show an alert. Later you can create an events page
+    alert('Upcoming Events feature coming soon!');
+  };
+
+  const handleSubmissionsPress = () => {
+    router.push('/(tabs)/submissions' as any);
+  };
 
   return (
     <ParallaxScrollView
@@ -61,16 +53,6 @@ export default function HomeScreen() {
               </ThemedText>
             </ThemedView> */}
 
-            <ThemedView style={styles.donationCard}>
-              <ThemedText style={styles.sectionTitle}>Make a Difference</ThemedText>
-              <ThemedText style={styles.donationText}>
-                Support our cause with a donation
-              </ThemedText>
-              <TouchableOpacity style={styles.donateButton} onPress={navigateToDonation}>
-                <ThemedText style={styles.buttonText}>💖 Donate Now</ThemedText>
-              </TouchableOpacity>
-            </ThemedView>
-
             {/* Form Button Section */}
             <ThemedView style={styles.formCard}>
               <ThemedText style={styles.sectionTitle}>Get in Touch</ThemedText>
@@ -78,7 +60,39 @@ export default function HomeScreen() {
                 Have questions or feedback? Contact us!
               </ThemedText>
               <TouchableOpacity style={styles.formButton} onPress={handleFormPress}>
-                <ThemedText style={styles.buttonText}>📝 FORM</ThemedText>
+                <ThemedText style={styles.buttonText}>� FORM</ThemedText>
+              </TouchableOpacity>
+            </ThemedView>
+
+            <ThemedView style={styles.donationCard}>
+              <ThemedText style={styles.sectionTitle}>Make a Difference</ThemedText>
+              <ThemedText style={styles.donationText}>
+                Support our cause with a donation
+              </ThemedText>
+              <TouchableOpacity style={styles.donateButton} onPress={navigateToDonation}>
+                <ThemedText style={styles.buttonText}>� Donate Now</ThemedText>
+              </TouchableOpacity>
+            </ThemedView>
+
+            {/* Submissions Section */}
+            <ThemedView style={styles.submissionsCard}>
+              <ThemedText style={styles.sectionTitle}>Member Submissions</ThemedText>
+              <ThemedText style={styles.submissionsText}>
+                View all member registration submissions
+              </ThemedText>
+              <TouchableOpacity style={styles.submissionsButton} onPress={handleSubmissionsPress}>
+                <ThemedText style={styles.buttonText}>📋 View Submissions</ThemedText>
+              </TouchableOpacity>
+            </ThemedView>
+
+            {/* Upcoming Events Section */}
+            <ThemedView style={styles.eventsCard}>
+              <ThemedText style={styles.sectionTitle}>Upcoming Events</ThemedText>
+              <ThemedText style={styles.eventsText}>
+                Stay updated with our latest events and activities
+              </ThemedText>
+              <TouchableOpacity style={styles.eventsButton} onPress={handleEventsPress}>
+                <ThemedText style={styles.buttonText}>🎉 View Events</ThemedText>
               </TouchableOpacity>
             </ThemedView>
 
@@ -225,6 +239,46 @@ const styles = StyleSheet.create({
   },
   formButton: {
     backgroundColor: '#007AFF',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  eventsCard: {
+    padding: 20,
+    backgroundColor: 'rgba(255, 149, 0, 0.1)',
+    borderRadius: 12,
+    gap: 12,
+    alignItems: 'center',
+  },
+  eventsText: {
+    fontSize: 16,
+    textAlign: 'center',
+    opacity: 0.8,
+  },
+  eventsButton: {
+    backgroundColor: '#FF9500',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  submissionsCard: {
+    padding: 20,
+    backgroundColor: 'rgba(88, 86, 214, 0.1)',
+    borderRadius: 12,
+    gap: 12,
+    alignItems: 'center',
+  },
+  submissionsText: {
+    fontSize: 16,
+    textAlign: 'center',
+    opacity: 0.8,
+  },
+  submissionsButton: {
+    backgroundColor: '#5856D6',
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 8,

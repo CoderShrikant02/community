@@ -21,6 +21,7 @@ const MAPPING = {
   'heart.fill': 'favorite',
   'person.fill': 'person',
   'person.badge.key.fill': 'admin-panel-settings',
+  'doc.text.fill': 'article',
 } as IconMapping;
 
 /**

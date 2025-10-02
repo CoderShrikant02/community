@@ -116,8 +116,9 @@ class ApiService {
       }
     }
     
-    // Production environment - replace with your actual production URL
-    return 'https://your-production-api.com/api';
+    // Production environment - replace with your actual Render URL
+    // Example: return 'https://mavs-backend-abcd.onrender.com/api';
+    return 'https://your-render-app-name.onrender.com/api';
   }
 
   /**
@@ -349,7 +350,7 @@ class ApiService {
     },
 
     /**
-     * Get all members (admin only)
+     * Get all members (requires authentication)
      */
     getAll: async (token: string): Promise<ApiResponse<Member[]>> => {
       try {
