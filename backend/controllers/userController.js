@@ -27,12 +27,12 @@ const register = async (req, res) => {
     }
 
     // Check if user already exists
-    const [existingUsers] = await pool.execute(
-      'SELECT user_id FROM users WHERE email = ?',
+    const existingUsers = await pool.query(
+      'SELECT user_id FROM users WHERE email = $1',
       [email]
     );
 
-    if (existingUsers.length > 0) {
+    if (existingUsers.rows.length > 0) {
       return res.status(400).json({ error: 'User already exists with this email' });
     }
 
@@ -40,24 +40,20 @@ const register = async (req, res) => {
     const saltRounds = 12;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-    // Insert user
-    const [result] = await pool.execute(
-      'INSERT INTO users (full_name, email, password, role) VALUES (?, ?, ?, ?)',
+    // Insert user and return the created user
+    const result = await pool.query(
+      'INSERT INTO users (full_name, email, password, role) VALUES ($1, $2, $3, $4) RETURNING user_id, full_name, email, role, created_at',
       [full_name, email, hashedPassword, role]
     );
 
-    // Get the created user
-    const [newUser] = await pool.execute(
-      'SELECT user_id, full_name, email, role, created_at FROM users WHERE user_id = ?',
-      [result.insertId]
-    );
+    const newUser = result.rows[0];
 
     // Generate token
-    const token = generateToken(newUser[0]);
+    const token = generateToken(newUser);
 
     res.status(201).json({
       message: 'User registered successfully',
-      user: newUser[0],
+      user: newUser,
       token
     });
 
@@ -78,16 +74,16 @@ const login = async (req, res) => {
     }
 
     // Find user
-    const [users] = await pool.execute(
-      'SELECT user_id, full_name, email, password, role, created_at FROM users WHERE email = ?',
+    const users = await pool.query(
+      'SELECT user_id, full_name, email, password, role, created_at FROM users WHERE email = $1',
       [email]
     );
 
-    if (users.length === 0) {
+    if (users.rows.length === 0) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    const user = users[0];
+    const user = users.rows[0];
 
     // Check password
     const isValidPassword = await bcrypt.compare(password, user.password);
@@ -116,16 +112,16 @@ const login = async (req, res) => {
 // Get user profile
 const getProfile = async (req, res) => {
   try {
-    const [users] = await pool.execute(
-      'SELECT user_id, full_name, email, role, created_at FROM users WHERE user_id = ?',
+    const users = await pool.query(
+      'SELECT user_id, full_name, email, role, created_at FROM users WHERE user_id = $1',
       [req.user.user_id]
     );
 
-    if (users.length === 0) {
+    if (users.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    res.json({ user: users[0] });
+    res.json({ user: users.rows[0] });
   } catch (error) {
     console.error('Get profile error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -135,11 +131,11 @@ const getProfile = async (req, res) => {
 // Get all users (admin only)
 const getAllUsers = async (req, res) => {
   try {
-    const [users] = await pool.execute(
+    const users = await pool.query(
       'SELECT user_id, full_name, email, role, created_at FROM users ORDER BY created_at DESC'
     );
 
-    res.json({ users });
+    res.json({ users: users.rows });
   } catch (error) {
     console.error('Get all users error:', error);
     res.status(500).json({ error: 'Internal server error' });
