@@ -42,7 +42,7 @@ testConnection();
 
 // Routes
 app.get("/", (req, res) => {
-  res.json({ message: "MAVS Backend API is " });
+  res.json({ message: "MAVS Backend API is running 🚀" });
 });
 
 // Authentication routes

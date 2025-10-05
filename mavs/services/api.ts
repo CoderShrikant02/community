@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { Platform } from 'react-native';
-import Constants from 'expo-constants';
+// import Constants from 'expo-constants';   // Uncomment when using local development
 
 // Types for API responses and requests
 export interface User {
@@ -84,11 +84,18 @@ class ApiService {
   constructor() {
     this.baseURL = this.getBaseURL();
     
+    console.log(`🔗 API Service initialized with baseURL: ${this.baseURL}`);
+    
     this.api = axios.create({
       baseURL: this.baseURL,
-      timeout: 10000,
+      timeout: 15000, // Increased timeout for Render cold starts
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      // Add these for better mobile compatibility
+      validateStatus: function (status) {
+        return status >= 200 && status < 300;
       },
     });
 
@@ -99,6 +106,11 @@ class ApiService {
    * Determine the correct base URL based on the platform and environment
    */
   private getBaseURL(): string {
+    // Always use production backend since it's working perfectly
+    return 'https://mavs-backend-8kuk.onrender.com/api';
+    
+    // Uncomment below for local development when needed
+    /*
     if (__DEV__) {
       // Development environment
       if (Platform.OS === 'web') {
@@ -118,6 +130,7 @@ class ApiService {
     
     // Production environment - your deployed Render backend
     return 'https://mavs-backend-8kuk.onrender.com/api';
+    */
   }
 
   /**
@@ -129,6 +142,7 @@ class ApiService {
       (config) => {
         // Token will be added per request when needed
         console.log(`🚀 API Request: ${config.method?.toUpperCase()} ${config.url}`);
+        console.log(`🔗 Full URL: ${config.baseURL}${config.url}`);
         return config;
       },
       (error) => {
@@ -144,7 +158,14 @@ class ApiService {
         return response;
       },
       (error) => {
-        console.error('❌ Response Error:', error.response?.data || error.message);
+        console.error('❌ Response Error:', error.message);
+        console.error('❌ Error Details:', {
+          code: error.code,
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          url: error.config?.url,
+          baseURL: error.config?.baseURL
+        });
         
         // Handle common error scenarios
         if (error.response?.status === 401) {
@@ -154,6 +175,8 @@ class ApiService {
           console.log('🚫 Access forbidden');
         } else if (error.response?.status >= 500) {
           console.log('🔥 Server error');
+        } else if (error.message === 'Network Error') {
+          console.log('🌐 Network connectivity issue - check internet connection and URL');
         }
         
         return Promise.reject(error);
@@ -211,21 +234,69 @@ class ApiService {
    */
   public async testConnection(): Promise<ApiResponse> {
     try {
-      return await this.get('/test');
+      console.log(`🔍 Connecting to: ${this.baseURL}/test`);
+      console.log(`📱 Environment info:`, {
+        isDev: __DEV__,
+        nodeEnv: process.env.NODE_ENV,
+        platform: Platform.OS
+      });
+      
+      const response = await this.get<ApiResponse>('/test');
+      console.log('✅ Connection successful:', response);
+      return response;
     } catch (error: any) {
+      console.error('❌ Connection failed:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        code: error.code,
+        status: error.response?.status,
+        url: error.config?.url,
+        baseURL: error.config?.baseURL,
+        timeout: error.config?.timeout
+      });
+      
+      if (error.message === 'Network Error') {
+        console.log('🚨 Network Error Detected - Possible causes:');
+        console.log('   1. Backend server is not running');
+        console.log('   2. Internet connection issues');
+        console.log('   3. Android network security policy blocking HTTPS');
+        console.log('   4. CORS configuration issues');
+        console.log('   5. SSL certificate problems');
+      }
+      
       throw new Error(error.response?.data?.message || 'Failed to connect to API');
     }
   }
 
   /**
-   * Check API health
+   * Check API health with retry logic for Render cold starts
    */
   public async healthCheck(): Promise<ApiResponse> {
-    try {
-      return await this.get('/health');
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Health check failed');
+    const maxRetries = 3;
+    const retryDelay = 5000; // 5 seconds
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`🏥 Health check attempt ${attempt}/${maxRetries} to: ${this.baseURL}/health`);
+        
+        const response = await this.get<ApiResponse>('/health');
+        console.log('✅ Health check successful:', response);
+        return response;
+      } catch (error: any) {
+        console.error(`❌ Health check attempt ${attempt} failed:`, error.message);
+        
+        if (attempt === maxRetries) {
+          throw new Error('Backend is not responding after multiple attempts. Please check your internet connection.');
+        }
+        
+        if (error.message === 'Network Error' && attempt < maxRetries) {
+          console.log(`⏳ Waiting ${retryDelay/1000}s before retry (Render may be waking up)...`);
+          await new Promise(resolve => setTimeout(resolve, retryDelay));
+        }
+      }
     }
+    
+    throw new Error('Health check failed after all retries');
   }
 
   /**
@@ -551,6 +622,38 @@ class ApiService {
    */
   public getApiUrl(): string {
     return this.baseURL;
+  }
+
+  /**
+   * Simple health check using fetch (for debugging network issues)
+   */
+  public async simpleHealthCheck(): Promise<boolean> {
+    try {
+      const url = `${this.baseURL}/health`;
+      console.log(`🔍 Simple fetch to: ${url}`);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      console.log(`📡 Response status: ${response.status}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Simple health check successful:', data);
+        return true;
+      } else {
+        console.error('❌ Response not OK:', response.status, response.statusText);
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ Simple health check failed:', error);
+      return false;
+    }
   }
 
   /**

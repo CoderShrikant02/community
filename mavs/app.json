@@ -18,7 +18,20 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.mavs.app",
-      "versionCode": 1
+      "versionCode": 1,
+      "permissions": [
+        "INTERNET",
+        "ACCESS_NETWORK_STATE"
+      ],
+      "usesCleartextTraffic": false,
+      "networkSecurityConfig": {
+        "domain": [
+          {
+            "domain": "mavs-backend-8kuk.onrender.com",
+            "includeSubdomains": false
+          }
+        ]
+      }
     },
     "web": {
       "bundler": "metro",
