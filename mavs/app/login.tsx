@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -15,14 +15,37 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { ThemedText } from '@/components/ThemedText';
 import { useAuth } from '@/context/AuthContext';
+import { apiService } from '@/services/api';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [backendStatus, setBackendStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking');
   const { login } = useAuth();
   const router = useRouter();
+
+  // Check backend connection status
+  const checkBackendConnection = async () => {
+    try {
+      setBackendStatus('checking');
+      await apiService.healthCheck();
+      setBackendStatus('connected');
+    } catch (error) {
+      console.log('Backend connection failed:', error);
+      setBackendStatus('disconnected');
+    }
+  };
+
+  // Check backend connection on component mount
+  useEffect(() => {
+    checkBackendConnection();
+    
+    // Optionally, check every 30 seconds
+    const interval = setInterval(checkBackendConnection, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleLogin = async () => {
     if (!email || !password) {

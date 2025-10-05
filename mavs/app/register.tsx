@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -16,6 +16,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { ThemedText } from '@/components/ThemedText';
 import { useAuth } from '@/context/AuthContext';
+import { apiService } from '@/services/api';
 
 export default function RegisterScreen() {
   const [fullName, setFullName] = useState('');
@@ -26,8 +27,30 @@ export default function RegisterScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [backendStatus, setBackendStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking');
   const { register } = useAuth();
   const router = useRouter();
+
+  // Check backend connection status
+  const checkBackendConnection = async () => {
+    try {
+      setBackendStatus('checking');
+      await apiService.healthCheck();
+      setBackendStatus('connected');
+    } catch (error) {
+      console.log('Backend connection failed:', error);
+      setBackendStatus('disconnected');
+    }
+  };
+
+  // Check backend connection on component mount
+  useEffect(() => {
+    checkBackendConnection();
+    
+    // Optionally, check every 30 seconds
+    const interval = setInterval(checkBackendConnection, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleRegister = async () => {
     if (!fullName || !email || !password || !confirmPassword) {
@@ -97,6 +120,41 @@ export default function RegisterScreen() {
               </View>
               <ThemedText style={styles.appName}>MAVS</ThemedText>
               <ThemedText style={styles.tagline}>Create Your Account</ThemedText>
+            </View>
+
+            {/* Backend Status Indicator */}
+            <View style={styles.statusContainer}>
+              <View style={[
+                styles.statusIndicator, 
+                backendStatus === 'connected' ? styles.statusConnected : 
+                backendStatus === 'disconnected' ? styles.statusDisconnected : 
+                styles.statusChecking
+              ]}>
+                <View style={[
+                  styles.statusDot,
+                  backendStatus === 'connected' ? styles.dotConnected : 
+                  backendStatus === 'disconnected' ? styles.dotDisconnected : 
+                  styles.dotChecking
+                ]} />
+                <ThemedText style={[
+                  styles.statusText,
+                  backendStatus === 'connected' ? styles.textConnected : 
+                  backendStatus === 'disconnected' ? styles.textDisconnected : 
+                  styles.textChecking
+                ]}>
+                  {backendStatus === 'connected' ? 'Backend Connected' : 
+                   backendStatus === 'disconnected' ? 'Backend Disconnected' : 
+                   'Checking Backend...'}
+                </ThemedText>
+                {backendStatus === 'disconnected' && (
+                  <TouchableOpacity 
+                    style={styles.retryButton} 
+                    onPress={checkBackendConnection}
+                  >
+                    <ThemedText style={styles.retryText}>Retry</ThemedText>
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
 
             {/* Form Section */}
@@ -408,5 +466,68 @@ const styles = StyleSheet.create({
   footerText: {
     color: 'rgba(255,255,255,0.6)',
     fontSize: 13,
+  },
+  // Backend Status Styles
+  statusContainer: {
+    paddingHorizontal: 20,
+    marginBottom: 20,
+  },
+  statusIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  statusConnected: {
+    backgroundColor: 'rgba(76, 175, 80, 0.2)',
+  },
+  statusDisconnected: {
+    backgroundColor: 'rgba(244, 67, 54, 0.2)',
+  },
+  statusChecking: {
+    backgroundColor: 'rgba(255, 193, 7, 0.2)',
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  dotConnected: {
+    backgroundColor: '#4CAF50',
+  },
+  dotDisconnected: {
+    backgroundColor: '#F44336',
+  },
+  dotChecking: {
+    backgroundColor: '#FFC107',
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  textConnected: {
+    color: '#4CAF50',
+  },
+  textDisconnected: {
+    color: '#F44336',
+  },
+  textChecking: {
+    color: '#FFC107',
+  },
+  retryButton: {
+    marginLeft: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    backgroundColor: 'rgba(244, 67, 54, 0.3)',
+    borderRadius: 12,
+  },
+  retryText: {
+    color: '#F44336',
+    fontSize: 10,
+    fontWeight: '600',
   },
 });
