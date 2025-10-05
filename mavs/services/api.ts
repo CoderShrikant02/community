@@ -116,9 +116,8 @@ class ApiService {
       }
     }
     
-    // Production environment - replace with your actual Render URL
-    // Example: return 'https://mavs-backend-abcd.onrender.com/api';
-    return 'https://your-render-app-name.onrender.com/api';
+    // Production environment - your deployed Render backend
+    return 'https://mavs-backend-8kuk.onrender.com/api';
   }
 
   /**
